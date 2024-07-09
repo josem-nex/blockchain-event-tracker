@@ -1,12 +1,8 @@
 const { ethers } = require("ethers");
 const { Web3 } = require("web3");
 
-const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/XO3RVPF7PH8WZBEE3vkWOzr39k0oRhRr");
-// const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/XO3RVPF7PH8WZBEE3vkWOzr39k0oRhRr");
+const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/xfnApveI4Et5xdxgicivAdAbWsKTt3LY");
 
-// provider.getBlockNumber().then((blockNumber) => {
-//     console.log("Block number:", blockNumber);
-// });
 provider.getBlockNumber().then((blockNumber) => {
     console.log("Block number:", blockNumber);
 })
@@ -17,6 +13,7 @@ const contractABI = [{ "anonymous": false, "inputs": [{ "indexed": true, "intern
 const contractEthjs = new ethers.Contract(contractAddress, contractABI, provider);
 
 
+
 contractEthjs.on("*", (event) => {
     console.log("Evento: ", event.fragment.name);
     let eventData = contractEthjs.interface.getEvent(event.fragment.name);
@@ -24,3 +21,24 @@ contractEthjs.on("*", (event) => {
         console.log(eventData.inputs[i].name, ":", event.args[i]);
     }
 });
+
+
+/*  
+const eventsNames = [];
+contractEthjs.interface.fragments.forEach((fragment) => {
+    if (fragment.type === "event") {
+        eventsNames.push(fragment.name);
+    }
+});
+console.log("Eventos: ", eventsNames);
+async function getPastEvents(eventsNames) {
+    eventsNames.forEach(async (eventName) => {
+        const events = await contractEthjs.queryFilter(eventName, 0, "latest");
+        console.log("Eventos pasados: ", events);
+    });
+    // const events = await contractEthjs.queryFilter(eventsNames, 0, "latest");
+    // console.log("Eventos pasados: ", events);
+}
+
+getPastEvents(eventsNames);
+ */

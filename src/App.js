@@ -5,75 +5,56 @@ import { ethers } from 'ethers';
 // https://eth-sepolia.g.alchemy.com/v2/8PiV1eJiecx-k9WgE-aa-yZQ5RsdUYrY
 
 function App() {
+  const RPCProvider = "https://eth-sepolia.g.alchemy.com/v2/xfnApveI4Et5xdxgicivAdAbWsKTt3LY"
+  const contractAddress = "0xD8466f8C9846955Dcc7415b1F06b766E14c663d7";
+  const contractABI = [{ "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "string", "name": "_message", "type": "string" }], "name": "NewEventMessage", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "string", "name": "_name", "type": "string" }], "name": "NewEventName", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "_number", "type": "uint256" }], "name": "NewEventNumber", "type": "event" }, { "inputs": [{ "internalType": "uint256", "name": "_value", "type": "uint256" }], "name": "addToNumber", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_message", "type": "string" }], "name": "createEventMessage", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }], "name": "createEventName", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "getNumber", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }];
   const [provider, setProvider] = useState(null);
-  const [rpcUrl, setRpcUrl] = useState(''); // Nuevo estado para la URL del proveedor RPC
-  const [contractAddress, setContractAddress] = useState('');
-  const [contractABI, setContractABI] = useState('');
   const [events, setEvents] = useState([]);
 
   // Conexión a la blockchain
-  const connectToBlockchain = async () => {
-    try {
-      // Utilizar la URL del proveedor RPC ingresada por el usuario
-      const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/8PiV1eJiecx-k9WgE-aa-yZQ5RsdUYrY");
-      setProvider(provider);
-    } catch (error) {
-      console.error("Error connecting to blockchain:", error);
-    }
-  };
+  useEffect(() => {
+    const connect = async () => {
+      try {
+        const provider = new ethers.JsonRpcProvider(RPCProvider);
+        setProvider(provider);
+      } catch (error) {
+        console.error("Error connecting to blockchain:", error);
+      }
+    };
+    connect();
+  }, []);
 
   // Obtener eventos del contrato
   useEffect(() => {
     if (provider && contractAddress && contractABI) {
       const contract = new ethers.Contract(contractAddress, contractABI, provider);
 
-      // Suscribirse a eventos del contrato (ejemplo: evento "Transfer")
-      contract.on("NewEventName", (_from, _name) => {
-        setEvents(prevEvents => [...prevEvents, { _from, _name }]);
+      contract.on("*", (event) => {
+        console.log("Evento: ", event.fragment.name);
+        let eventData = contract.interface.getEvent(event.fragment.name);
+        let eventInfo = { nombre: event.fragment.name, argumentos: [] };
+        for (let i = 0; i < eventData.inputs.length; i++) {
+          eventInfo.argumentos.push({ nombre: eventData.inputs[i].name, valor: event.args[i] });
+        }
+        setEvents(eventosAnteriores => [...eventosAnteriores, eventInfo]);
       });
 
-      // Limpieza al desmontar el componente
       return () => {
         contract.removeAllListeners();
       };
     }
   }, [provider, contractAddress, contractABI]);
-
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        {!provider && <button onClick={connectToBlockchain}>Connect to Blockchain</button>}
-        {provider && (
-          <>
-            <input
-              type="text"
-              placeholder="RPC URL"
-              value={rpcUrl}
-              onChange={(e) => setRpcUrl(e.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Contract Address"
-              value={contractAddress}
-              onChange={(e) => setContractAddress(e.target.value)}
-            />
-            <textarea
-              placeholder="Contract ABI"
-              value={contractABI}
-              onChange={(e) => setContractABI(e.target.value)}
-            />
-            <h2>Eventos del Contrato:</h2>
-            <ul>
-              {events.map((event, index) => (
-                <li key={index}>
-                  Nombre cambiado por {event._from} a {event._name}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </header>
+      {/* Código para mostrar la interfaz de usuario */}
+      <h2>Eventos del Contrato:</h2>
+      <ul>
+        {events.map((evento, index) => (
+          <li key={index}>
+            {evento.nombre}: {evento.argumentos.map(arg => `${arg.nombre}: ${arg.valor}`).join(', ')}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
