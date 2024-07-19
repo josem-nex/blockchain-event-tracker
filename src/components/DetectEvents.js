@@ -4,12 +4,19 @@ import './DetectEvents.css';
 import Button from './Button';
 
 function DetectEvents() {
+
+    //#region PARAMETERS TO CONNECT TO THE BLOCKCHAIN
+
     // the provider is the connection to the blockchain
     const RPCProvider = "https://eth-sepolia.g.alchemy.com/v2/xfnApveI4Et5xdxgicivAdAbWsKTt3LY"
     // the contract address of the smart contract
     const contractAddress = "0xD8466f8C9846955Dcc7415b1F06b766E14c663d7";
     // the contract ABI (Application Binary Interface) is the definition of the smart contract
+    // eslint-disable-next-line
     const contractABI = [{ "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "string", "name": "_message", "type": "string" }], "name": "NewEventMessage", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "string", "name": "_name", "type": "string" }], "name": "NewEventName", "type": "event" }, { "anonymous": false, "inputs": [{ "indexed": true, "internalType": "address", "name": "_from", "type": "address" }, { "indexed": false, "internalType": "uint256", "name": "_number", "type": "uint256" }], "name": "NewEventNumber", "type": "event" }, { "inputs": [{ "internalType": "uint256", "name": "_value", "type": "uint256" }], "name": "addToNumber", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_message", "type": "string" }], "name": "createEventMessage", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [{ "internalType": "string", "name": "_name", "type": "string" }], "name": "createEventName", "outputs": [], "stateMutability": "nonpayable", "type": "function" }, { "inputs": [], "name": "getNumber", "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }], "stateMutability": "view", "type": "function" }];
+
+    //#endregion
+
     const [provider, setProvider] = useState(null);
     const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('events')) || []);
     const [eventHash, setEventHash] = useState(() => JSON.parse(localStorage.getItem('eventHash')) || []);
@@ -21,7 +28,8 @@ function DetectEvents() {
                 const provider = new ethers.JsonRpcProvider(RPCProvider);
                 setProvider(provider);
             } catch (error) {
-                console.error("Error connecting to blockchain:", error);
+                console.error("Error connecting to blockchain: ", error);
+                alert("Error connecting to blockchain.");
             }
         };
         connect();
@@ -56,7 +64,7 @@ function DetectEvents() {
             }, 2000);
             return () => clearInterval(interval);
         }
-    }, [provider, contractAddress, contractABI]);
+    }, [provider, contractAddress, contractABI, events, eventHash]);
     // a simple UI to show the events
     return (
         <>

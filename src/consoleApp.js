@@ -1,11 +1,7 @@
 const { ethers } = require("ethers");
 
 const provider = new ethers.JsonRpcProvider("https://eth-sepolia.g.alchemy.com/v2/xfnApveI4Et5xdxgicivAdAbWsKTt3LY");
-// const web3 = new Web3("https://eth-sepolia.g.alchemy.com/v2/XO3RVPF7PH8WZBEE3vkWOzr39k0oRhRr");
 
-// provider.getBlockNumber().then((blockNumber) => {
-//     console.log("Block number:", blockNumber);
-// });
 provider.getBlockNumber().then((blockNumber) => {
     console.log("Block number:", blockNumber);
 })
