@@ -1,0 +1,17 @@
+/* hacer que este div solo llegue hasta la mitad de la pagina y la mitad derecha quede libre */
+.contract-address {
+    width: 90%;
+    float: left;
+
+}
+
+.btn {
+    width: 10%;
+
+    float: right;
+}
+
+.events {
+    width: 100%;
+    float: left;
+}
