@@ -2,8 +2,71 @@ import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import './DetectEvents.css';
 import Button from './Button';
+// rxdb
+import { addRxPlugin } from 'rxdb';
+import { RxDBDevModePlugin } from 'rxdb/plugins/dev-mode';
+// storage
+import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
+import { createRxDatabase } from 'rxdb';
+addRxPlugin(RxDBDevModePlugin);
+
+
+async function initializeDatabase() {
+
+
+    const eventdb = await createRxDatabase({
+        name: 'eventdb',
+        storage: getRxStorageDexie(),
+        eventReduce: true,
+        multiInstance: true,
+        ignoreDuplicate: true,
+    })
+
+    await eventdb.addCollections({
+        events: {
+            schema: {
+                title: 'event schema',
+                version: 0,
+                description: 'describes a simple event',
+                primaryKey: 'hash',
+                type: 'object',
+                properties: {
+                    nombre: {
+                        type: 'string',
+                    },
+                    hash: {
+                        type: 'string',
+                        maxLength: 100,
+                    },
+                    args: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                nombre: {
+                                    type: 'string',
+                                },
+                                valor: {
+                                    type: 'string',
+                                },
+                            },
+                        },
+                    },
+                    timestamp: {
+                        type: 'number',
+                    },
+                },
+                required: ['nombre', 'args'],
+            },
+        },
+    });
+    console.log('Database initialized');
+    return eventdb;
+}
 
 function DetectEvents() {
+
+
 
     //#region PARAMETERS TO CONNECT TO THE BLOCKCHAIN
 
@@ -18,10 +81,10 @@ function DetectEvents() {
     //#endregion
 
     const [provider, setProvider] = useState(null);
-    const [events, setEvents] = useState(() => JSON.parse(localStorage.getItem('events')) || []);
-    const [eventHash, setEventHash] = useState(() => JSON.parse(localStorage.getItem('eventHash')) || []);
-
+    const [events, setEvents] = useState([]);
+    const [eventdb, setEventdb] = useState(null);
     // blockchain connection
+
     useEffect(() => {
         const connect = async () => {
             try {
@@ -32,43 +95,67 @@ function DetectEvents() {
                 alert("Error connecting to blockchain.");
             }
         };
+        const initBD = async () => {
+            const eventdb = await initializeDatabase();
+            setEventdb(eventdb);
+        };
         connect();
+        initBD();
     }, []);
-    useEffect(() => {
-        // save the events and event hash in localStorage whenever they change
-        localStorage.setItem('events', JSON.stringify(events));
-        localStorage.setItem('eventHash', JSON.stringify(eventHash));
-    }, [events, eventHash]);
 
     // get events from the smart contract
     useEffect(() => {
-        if (provider && contractAddress && contractABI) {
+        if (provider && contractAddress && contractABI && eventdb) {
             const contract = new ethers.Contract(contractAddress, contractABI, provider);
 
-            const interval = setInterval(() => {
-                contract.on("*", (event) => {
+            const interval = setInterval(async () => {
+                contract.on("*", async (event) => {
                     console.log("Evento: ", event.fragment.name);
                     let eventData = contract.interface.getEvent(event.fragment.name);
                     let eventH = event.log.transactionHash;
-                    if (eventHash.includes(eventH)) {
+                    // if (eventHash.includes(eventH)) {
+                    //     return;
+                    // }
+                    const foundEvent = await eventdb.events.findOne({
+                        selector: {
+                            hash: eventH,
+                        },
+                    }).exec();
+
+                    if (foundEvent) {
                         return;
                     }
-                    setEventHash([eventH, ...eventHash]);
+
+
+                    // setEventHash([eventH, ...eventHash]);
                     let eventInfo = { nombre: event.fragment.name, args: [] };
                     for (let i = 0; i < eventData.inputs.length; i++) {
                         eventInfo.args.push({ nombre: String(eventData.inputs[i].name), valor: String(event.args[i]) });
                     }
-                    setEvents([eventInfo, ...events]);
+                    // setEvents([eventInfo, ...events]);
+
+                    const myEvent = {
+                        nombre: eventInfo.nombre,
+                        hash: eventH,
+                        args: eventInfo.args,
+                        timestamp: Date.now(),
+                    };
+                    await eventdb.events.upsert(myEvent);
                 });
+
+                // get all events from the database
+                const allEvents = await eventdb.collections.events.find().exec();
+                setEvents(allEvents.map(event => event.toJSON()).sort((a, b) => b.timestamp - a.timestamp));
 
             }, 2000);
             return () => clearInterval(interval);
         }
-    }, [provider, contractAddress, contractABI, events, eventHash]);
+
+    }, [provider, contractAddress, contractABI, eventdb/* , events, eventHash */]);
     // a simple UI to show the events
     return (
         <>
-            <Button onClick={() => { localStorage.clear(); window.location.reload(); }}>Clear Events</Button>
+            <Button onClick={async () => { await eventdb.events.find().remove(); window.location.reload(); }}>Clear Events</Button>
             <div className='contract-address'>
                 <h4>Contract Address:</h4>
                 <p>{contractAddress}</p>
